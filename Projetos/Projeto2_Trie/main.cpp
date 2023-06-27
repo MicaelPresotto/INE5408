@@ -9,7 +9,7 @@ using namespace std;
 class TrieNode {
 public:
     TrieNode* filhos[letras_alfabeto];
-    unsigned long prefixos, comprimento, posicao;
+    int prefixos, comprimento, posicao;
 
     TrieNode() {
         #pragma omp parallel for schedule(static)
