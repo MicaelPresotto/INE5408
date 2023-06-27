@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <omp.h>
 #define letras_alfabeto 26
 using namespace std;
 
@@ -9,14 +10,13 @@ class TrieNode {
 public:
     TrieNode* filhos[letras_alfabeto];
     unsigned long prefixos, comprimento, posicao;
-    bool fimPalavra;
 
     TrieNode() {
+        #pragma omp parallel for schedule(static)
         for (int i = 0; i < letras_alfabeto; i++) filhos[i] = nullptr;
         posicao = 0;
         comprimento = 0;
         prefixos = 0;
-        fimPalavra = false;
     }
     ~TrieNode(){};
 };
@@ -24,7 +24,6 @@ public:
 class Trie {
 private:
     TrieNode* root;
-
 public:
     Trie() {
         root = new TrieNode();
@@ -32,17 +31,22 @@ public:
     ~Trie() {deletar(root); root = nullptr;}
     void deletar(TrieNode* root){
         for (int i = 0; i < letras_alfabeto; i++){
+            
             if(root->filhos[i]){
                 deletar(root->filhos[i]);
             }
         }
         delete root;
     }
-    void insert(string key, int posicao, int comprimento) {
-        TrieNode* aux = root;
+    string strToLower(string key){
         for (char& c : key) {
             c = tolower(c);
         }
+        return key;
+    }
+    void insert(string key, int posicao, int comprimento) {
+        TrieNode* aux = root;
+        strToLower(key);
         for (char c : key) {
             int index = c - 'a';
             if (!aux->filhos[index]) {
@@ -53,30 +57,12 @@ public:
         }
         aux->comprimento = comprimento;
         aux->posicao = posicao;
-        aux->fimPalavra = true;
-    }
-
-
-    bool search(string key) {
-        TrieNode* aux = root;
-        for (char& c : key) {
-            c = tolower(c);
-        }
-        for (char c : key) {
-            int index = c - 'a';
-            if (!aux->filhos[index]) {
-                return false;
-            }
-            aux = aux->filhos[index];
-        }
-        return aux->fimPalavra;
     }
 
     TrieNode* countPrefixes(string key) {
         TrieNode* aux = root;
-        for (char& c : key) {
-            c = tolower(c);
-        }
+        strToLower(key);
+        #pragma omp parallel for schedule(guided)
         for (char c : key) {
             int index = c - 'a';
             if (!aux->filhos[index]) {
@@ -89,7 +75,6 @@ public:
 };
 Trie trie;
 void extraiDics(string dic) {
-
     ifstream my_file(dic);
     if (my_file.is_open()){
         string linha;
@@ -119,6 +104,8 @@ int main() {
         }
         words.push_back(word);
     }
+    
+    #pragma omp parallel for schedule(static)
     for (int i = 0; i < words.size(); i++) {
         TrieNode* aux = trie.countPrefixes(words[i]);
         if (!aux) {
@@ -130,6 +117,6 @@ int main() {
             }
         }
     }
-
+ 
     return 0;
 }
